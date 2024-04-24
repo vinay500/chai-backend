@@ -8,7 +8,7 @@ const registerUser = asyncHandler( async (req, res) => {
     // res.status(200).json({
     //     message: "chai aur code backend"
     // })
-    const { fullName, email, password } = req.body;
+    const { fullName, email, password, username } = req.body;
     console.log('email: ',email);
     if(
         [fullName, email, password].some(
@@ -18,7 +18,7 @@ const registerUser = asyncHandler( async (req, res) => {
         throw new ApiError(500, "All Fields are Required")
     }
 
-    const existedUser = User.findOne({
+    const existedUser = await User.findOne({
         $or: [ { email }, { username }]
     })
 
@@ -27,8 +27,13 @@ const registerUser = asyncHandler( async (req, res) => {
     }
 
     // getting local file path after uploading the 
-    const avatarLocalPath = req.file?.avatar[0]?.path
-    const coverImageLocalPath = req.file?.avatar[0]?.path
+    console.log("req.file:",req)
+    console.log("req.file:",req.files)
+    const avatarLocalPath = req.files?.avatar[0]?.path;
+    const coverImageLocalPath = req.files?.coverImage[0]?.path;
+
+    console.log('avatar: ',avatarLocalPath);
+    console.log('coverImageLocalPath: ',coverImageLocalPath);
 
     if(!avatarLocalPath){
         throw new ApiError(400, "Avatar is Required")

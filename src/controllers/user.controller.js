@@ -30,8 +30,13 @@ const registerUser = asyncHandler( async (req, res) => {
     console.log("req.file:",req)
     console.log("req.file:",req.files)
     const avatarLocalPath = req.files?.avatar[0]?.path;
-    const coverImageLocalPath = req.files?.coverImage[0]?.path;
-
+    // const coverImageLocalPath = req.files?.coverImage[0]?.path;
+    // if coverImage is not sent in the request then it gets error saying can't read from undefined, it happens even if we are using 
+    // optional chaining ie., ?. so we will use if condition to check if the coverImage is present in the request or not
+    let coverImageLocalPath;
+    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0){
+        coverImageLocalPath = req.files.coverImage[0].path
+    }
     console.log('avatar: ',avatarLocalPath);
     console.log('coverImageLocalPath: ',coverImageLocalPath);
 

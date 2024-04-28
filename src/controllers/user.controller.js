@@ -3,7 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.models.js";
 import { uploadOnCloudinary } from '../utils/cloudinary.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
-
+import jwt from "jsonwebtoken";
 
 
 const generateAccessAndRefreshToken = async(userId) => {
@@ -54,8 +54,8 @@ const registerUser = asyncHandler( async (req, res) => {
     }
 
     // getting local file path after uploading the 
-    console.log("req.file:",req)
-    console.log("req.file:",req.files)
+    // console.log("req.file:",req)
+    // console.log("req.file:",req.files)
     const avatarLocalPath = req.files?.avatar[0]?.path;
     // const coverImageLocalPath = req.files?.coverImage[0]?.path;
     // if coverImage is not sent in the request then it gets error saying can't read from undefined, it happens even if we are using 
@@ -99,7 +99,7 @@ const registerUser = asyncHandler( async (req, res) => {
 })
 
 const loginUser = asyncHandler( async (req, res) => {
-    console.log('req: ',req);
+    // console.log('req: ',req);
     console.log('req.body: ',req.body);
     console.log('user login details - email: ',req.body.email, ' password: ',req.body.password);
 
@@ -178,5 +178,45 @@ const logoutUser = asyncHandler(async (req, res)=>{
 })
 
 
+const refreshAccessToken =  asyncHandler( async (req, res) => {
 
-export { registerUser, loginUser, logoutUser }
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
+
+    if(!incomingRefreshToken){
+        throw new ApiError(401, "Unauthorized Request");
+    }
+    try {
+        const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
+    
+        if(!decodedToken){
+            throw new ApiError(401, "Invalid Refresh Token");
+        }
+    
+        const user = await User.findById(decodedToken?._id)
+    
+        if (!user){
+            throw new ApiError(401, "Invalid Refresh Token ")
+        }
+    
+        if(incomingRefreshToken !== user.refreshToken){
+            throw new ApiError(401, "Refresh Token is Expired or User")
+        }
+    
+    
+        const { accessToken, newRefreshToken } = await generateAccessAndRefreshToken(user._id)
+    
+        const options = {
+            httponly: true,
+            secure: true,
+        }
+    
+        res.status(200).cookie("accessToken",accessToken, options).cookie("refreshToken",newRefreshToken, options)
+        .json(new ApiResponse(200, {}, "Access Token Refreshed Successfully"))
+    } catch (error) {
+        throw new ApiError(401, error?.message || "Invalid refresh Token")
+    }
+
+})
+
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken }

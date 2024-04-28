@@ -9,6 +9,7 @@ const registerUser = asyncHandler( async (req, res) => {
     //     message: "chai aur code backend"
     // })
     const { fullName, email, password, username } = req.body;
+    console.log('req.body: ',req.body);
     console.log('email: ',email);
     if(
         [fullName, email, password].some(
@@ -71,5 +72,45 @@ const registerUser = asyncHandler( async (req, res) => {
     )
 })
 
+const loginUser = asyncHandler( async (req, res) => {
+    console.log('req: ',req);
+    console.log('req.body: ',req.body);
+    console.log('user login details - email: ',req.body.email, ' password: ',req.body.password);
 
-export { registerUser }
+    const { email ,username, password } = req.body;
+
+    if(!email && !username ){
+        throw new ApiError(500, "Email or Username is Required");
+    }
+
+    const user = await User.findOne({
+        $or: [ { email }, { username } ]
+    })
+
+    if(!user){
+        throw new ApiError(404, "User does not Exist");
+    }
+
+    const isPasswordValid = await user.isPasswordCorrect(password)
+
+    if(!isPasswordValid){
+        throw new ApiError(401, "Incorrect Password");
+    }
+
+
+
+
+
+})
+
+
+
+
+
+
+
+
+
+
+
+export { registerUser, loginUser }

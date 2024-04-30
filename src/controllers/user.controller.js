@@ -210,7 +210,7 @@ const refreshAccessToken =  asyncHandler( async (req, res) => {
             secure: true,
         }
     
-        res.status(200).cookie("accessToken",accessToken, options).cookie("refreshToken",newRefreshToken, options)
+        res.status(200).cookie("accessToken",accessToken, options).cookie("refreshToken", newRefreshToken, options)
         .json(new ApiResponse(200, {}, "Access Token Refreshed Successfully"))
     } catch (error) {
         throw new ApiError(401, error?.message || "Invalid refresh Token")
@@ -218,5 +218,123 @@ const refreshAccessToken =  asyncHandler( async (req, res) => {
 
 })
 
+const changePassword = asyncHandler( async(req, res) => {
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken }
+    const { oldPassword, newPassword } = req.body;
+    const user = await User.findById(req.user?._id);
+
+    if(!user){
+        throw new ApiError(401, "Unauthorized Request")
+    }
+
+    const passwordValid = await user.isPasswordCorrect(oldPassword);
+
+    if(!passwordValid){
+        throw new ApiError(401, "Invalid Password")
+    }
+
+    user.password = newPassword;
+
+    await user.save({ validateBeforeSave: false})
+
+    return res.status(200).json(new ApiResponse(200, "Password Changed Successfully "))
+
+})
+
+const getCurrentUser = asyncHandler( async(req, res) => {
+    return res.status(200).json(200, req.user, "current user fetched successfully")
+})
+
+
+const updateAccountDetails = asyncHandler(async(req,res)=>{
+    const {fullName, email} = req.body;
+
+    if(!fullName || !email){
+        throw new ApiError(400, "All Fields are Required")
+    }
+
+    const user = User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set:{
+                fullName,
+                email: email
+            }
+        },
+        {new: true}
+    ).select("-password")
+
+    return res.status(200).json(new ApiResponse(200, user, "Account details Updated Successfully"))
+})
+
+const updateUserAvatar = asyncHandler(async(req, res) => {
+    // here, we are using req.file and not req.files(as we used in user Registration)
+    // reason being in user registration two files are being uploaded avatar, cover image
+    // so we are using req.files
+    // but here only one file is being uploaded so we are using req.file 
+    const avatarLocalPath = req.file?.path
+
+    if(!avatarLocalPath){
+        throw new ApiError(400, "Avatar file is missing");
+    }
+
+    const avatar = await uploadOnCloudinary(avatarLocalPath)
+
+    if(!avatar.url){
+        throw new ApiError(400, "Error while uploading on avatar")
+    }
+
+    const user = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set:{
+                avatar: avatar.url
+            }
+        },
+        {new: true}
+    )
+
+    return res.status(200).json(
+        new ApiResponse(200, user, "Avatar Updated Successfully")
+    )
+})
+
+
+
+const updateUserCoverImage = asyncHandler(async(req, res) => {
+    // here, we are using req.file and not req.files(as we used in user Registration)
+    // reason being in user registration two files are being uploaded avatar, cover image
+    // so we are using req.files
+    // but here only one file is being uploaded so we are using req.file 
+    const coverImageLocalPath = req.file?.path
+
+    if(!coverImageLocalPath){
+        throw new ApiError(400, "Cover Image file is missing");
+    }
+
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+
+    if(!coverImage.url){
+        throw new ApiError(400, "Error while uploading on Cover Image")
+    }
+
+    const user = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set:{
+                coverImage: coverImage.url
+            }
+        },
+        {new: true}
+    )
+
+    return res.status(200).json(
+        new ApiResponse(200, user, "Cover Image Updated Successfully")
+    )
+
+})
+
+
+
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken, changePassword, getCurrentUser, updateUserAvatar, updateUserCoverImage}

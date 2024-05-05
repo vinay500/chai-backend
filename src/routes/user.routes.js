@@ -39,7 +39,7 @@ router.route("/update-account").patch(verifyJWT, updateAccountDetails)
 // this route will update the avatar of the user so as it is a file uploading 
 // so we will use upload middleware(multer) to upload the file 
 router.route("/avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar)
-router.route("/cover-image").patch(verifyJWT, upload.single("/coverImage"), updateUserCoverImage)
+router.route("/cover-image").patch(verifyJWT, upload.single("coverImage"), updateUserCoverImage)
 // this is how we are getting the params so in route we are using :username
 // const { username } = req.params
 router.route("/c/:username").get(verifyJWT, getUserChannelProfile)

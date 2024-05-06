@@ -242,7 +242,8 @@ const changePassword = asyncHandler( async(req, res) => {
 })
 
 const getCurrentUser = asyncHandler( async(req, res) => {
-    return res.status(200).json(200, req.user, "current user fetched successfully")
+    return res.status(200)
+    .json(new ApiResponse(200, req.user, "current user fetched successfully"))
 })
 
 
@@ -253,7 +254,7 @@ const updateAccountDetails = asyncHandler(async(req,res)=>{
         throw new ApiError(400, "All Fields are Required")
     }
 
-    const user = User.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set:{
@@ -283,9 +284,9 @@ const updateUserAvatar = asyncHandler(async(req, res) => {
     if(!avatar.url){
         throw new ApiError(400, "Error while uploading on avatar")
     }
-
+    // todo - DELETE THE AVATAR IMAGE FROM BACKEND WHEN IT IS SUCCESSFULLY UPLOADED TO CLOUDINARY
     const user = await User.findByIdAndUpdate(
-        req.user._id,
+        req.user?._id,
         {
             $set:{
                 avatar: avatar.url
@@ -317,7 +318,7 @@ const updateUserCoverImage = asyncHandler(async(req, res) => {
     if(!coverImage.url){
         throw new ApiError(400, "Error while uploading on Cover Image")
     }
-
+    // todo - DELETE THE cOVER IMAGE FROM BACKEND WHEN IT IS SUCCESSFULLY UPLOADED TO CLOUDINARY
     const user = await User.findByIdAndUpdate(
         req.user._id,
         {

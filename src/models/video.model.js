@@ -20,7 +20,8 @@ const videoSchema = new Schema(
             type: String,
             required: true
         },
-        // duration is taken from cloudinary( video storage service) becoz video storage services are the one which will send details regarding the view time of video
+        // duration is taken from cloudinary( video storage service) becoz video storage services are the one 
+        // which will send details regarding the view time of video
         duration: {
             type: Number,
             required: true

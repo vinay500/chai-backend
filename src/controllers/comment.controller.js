@@ -14,11 +14,13 @@ const getVideoComments = asyncHandler(async (req, res) => {
 
 const addComment = asyncHandler(async (req, res) => {
     // TODO: add a comment to a video
-    const { content, videoId } = req.body;
+    const { content } = req.body;
     
     if(!content){
         throw new ApiError(400, "Content is Required");
     }
+
+    const { videoId } = req.params;
 
     if(!videoId){
         throw new ApiError(400, "Video ID is Required");
@@ -41,6 +43,11 @@ const addComment = asyncHandler(async (req, res) => {
         video,
         user
     })
+
+    return res.status(200).json(
+        new ApiResponse(200, comment, "Comment created Successfully")
+    )
+
 })
 
 const updateComment = asyncHandler(async (req, res) => {

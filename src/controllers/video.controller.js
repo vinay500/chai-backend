@@ -123,6 +123,9 @@ const updateVideo = asyncHandler(async (req, res) => {
                 thumbnail:thumbnailUploadedFile.url,
             }
         },
+        // new: true will tell mongodb to return the 
+        // modified document rather than the original document
+        { new: true }
     )
 
     if(!updatedVideo){

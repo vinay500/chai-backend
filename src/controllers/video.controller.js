@@ -19,6 +19,8 @@ const publishAVideo = asyncHandler(async (req, res) => {
     console.log(`title: ${title} description: ${description}`)
     // TODO: get video, upload to cloudinary, create video
     // console.log("req.files: ",req.files.videoFile[0].path)
+    console.log("req.files.videoFile: ",req.files.videoFile[0]?.path)
+    console.log("req.files.thumbnail: ",req.files.thumbnail[0]?.path)
     const videoFilePath = req.files.videoFile[0]?.path;
     const thumbnailFilePath = req.files.thumbnail[0]?.path;
     console.log("videoFilePath: ",videoFilePath)

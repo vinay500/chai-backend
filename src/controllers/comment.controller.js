@@ -40,6 +40,7 @@ const addComment = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Login and Try Again");
     }
 
+
     const comment = await Comment.create({
         content,
         video,

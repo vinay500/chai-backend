@@ -14,7 +14,9 @@ const getAllVideos = asyncHandler(async (req, res) => {
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
+    console.log("in publishAVideo")
     const { title, description} = req.body
+    console.log(`title: ${title} description: ${description}`)
     // TODO: get video, upload to cloudinary, create video
     // console.log("req.files: ",req.files.videoFile[0].path)
     const videoFilePath = req.files.videoFile[0]?.path;
@@ -54,6 +56,18 @@ const getVideoById = asyncHandler(async (req, res) => {
     // TODO:
     // 1.get video likes, comments, owner details, 
     // 2. if getVideoById is done becoz user is viewing the video then update views
+    
+    if(!video){
+        throw new ApiError("Video fetched failed");
+    }else{
+        await Video.findByIdAndUpdate(videoId,
+            {
+                $inc: {
+                    views: 1    
+                }
+            }
+        )
+    }   
     return res.status(200).json(
         new ApiResponse(200, video, "Video fetched Successfully")
     )

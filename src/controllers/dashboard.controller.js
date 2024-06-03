@@ -18,21 +18,21 @@ const getChannelStats = asyncHandler(async (req, res) => {
                 channel: new mongoose.Types.ObjectId(userId)
             }
         },
-        // {
+        {
         //     // it is used to group the subscribers but as we are using 
         //     // _id:null it will group all subscribers to a single group
         //     // and as we mentioend subscribersCount, it will add a field called subscribersCount
         //     // and as we mentioned $sum: 1 it will add 1 for every record
-        //     $group:{
-        //         _id: null,
-        //         subscribersCount:{
-        //             $sum: 1
-        //         }
-        //     }
+            $group:{
+                _id: null,
+                subscribersCount:{
+                    $sum: 1
+                }
+            }
+        },
+        // {
+        //     $count: "subscriberCount"
         // }
-        {
-            $count: "subscriberCount"
-        }
     ])
 
     // Extract the count from the result

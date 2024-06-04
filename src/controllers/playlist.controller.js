@@ -110,7 +110,7 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Playlist Not Found")
     }
     
-    if((playlist.owner.toString() && videoToBeUploaded.owner.toString())!= req.user._id.toString()){
+    if((playlist.owner.toString() && videoToBeUploaded.owner.toString()) != req.user._id.toString()){
         throw new ApiError(400, 'You are not the Owner for the Playlist or the Video')
     }
 
@@ -139,6 +139,49 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
     const {playlistId, videoId} = req.params
     // TODO: remove video from playlist
+
+    if(!playlistId || !videoId){
+        throw new ApiError(400, "playlistId and videoId are required")
+    }
+
+    console.log("videoId: ", videoId)
+
+    if(!isValidObjectId(videoId)){
+        throw new ApiError(400, 'Invalid VideoId')
+    }
+    if(!isValidObjectId(playlistId)){
+        throw new ApiError(400, 'Invalid PlaylistId')
+    }
+
+    const videoToBeRemoved = await Video.findById(videoId);
+    const playlist = await Playlist.findById(playlistId);
+
+    if(!videoToBeRemoved){
+        throw new ApiError(400, "Video Not Found")
+    }
+    if(!playlist){
+        throw new ApiError(400, "Playlist Not Found")
+    }
+    
+    if((playlist.owner.toString() && videoToBeRemoved.owner.toString())!= req.user._id.toString()){
+        throw new ApiError(400, 'You are not the Owner for the Playlist or the Video')
+    }
+
+    const videoRemoved = await Playlist.findByIdAndUpdate(playlistId,
+        {
+            $pull: {
+                video: videoId
+            }
+        },
+        {
+            new: 1
+        }
+    )
+
+    return res.status(200).json(
+        new ApiResponse(200, "Video Removed from Playlist Successfully")
+    )
+
 
 })
 

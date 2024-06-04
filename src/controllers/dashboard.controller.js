@@ -10,6 +10,10 @@ const getChannelStats = asyncHandler(async (req, res) => {
     // TODO: Get the channel stats like total video views, total subscribers, total videos, total likes etc.
     
     const userId = req?.user._id
+
+    if(!userId){
+        throw new ApiError(400, "Login and Try Again")
+    }
     console.log("userId: ",userId)
     // total subscribers
     const totalSubscribers = await Subscription.aggregate([
@@ -21,7 +25,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
         // {
         //     // it is used to group the subscribers but as we are using 
         //     // _id:null it will group all subscribers to a single group
-        //     // and as we mentioend subscribersCount, it will add a field called subscribersCount
+        //     // and as we mentioned subscribersCount, it will add a field called subscribersCount
         //     // and as we mentioned $sum: 1 it will add 1 for every record
         //     $group:{
         //         _id: null,

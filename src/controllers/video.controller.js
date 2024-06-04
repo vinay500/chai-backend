@@ -193,6 +193,38 @@ const deleteVideo = asyncHandler(async (req, res) => {
 const togglePublishStatus = asyncHandler(async (req, res) => {
     const { videoId } = req.params
 
+    if(!videoId){ 
+        throw new ApiError(400, 'VideoID is required')
+    }
+
+    const video = await Video.findById(videoId)
+
+    if(!video){ 
+        throw new ApiError(400, 'Invalid VideoID')
+    }
+    console.log("video fetched")
+    if(video.owner.toString() != req.user._id.toString()){
+        throw new ApiError(400, 'You are Not the Owner of the Video')
+    }
+    console.log("toggling video publish status")
+    const videoPublishUpdated = await Video.findByIdAndUpdate(videoId,{
+        $set:{
+            isPublished:!video.isPublished
+        }
+    },
+    {
+        new : 1
+    }
+);
+    console.log("videoPublishUpdated: ",videoPublishUpdated)
+
+    if(!videoPublishUpdated){
+        throw new ApiError(400, 'Something Went Wrong, Try Again')
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, videoPublishUpdated, "Video Publish Toggle Successfully")
+    )
 
 })
 

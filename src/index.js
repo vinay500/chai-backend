@@ -30,7 +30,7 @@ connectDB()
         console.log(`App is listenting on Port ${process.env.PORT}`)
     })
     app_listening.on('error',(err)=>{
-        consolee.log(`App failed to listen, Error: ${err}`);
+        console.log(`App failed to listen, Error: ${err}`);
         process.exit(1);
     })
 })

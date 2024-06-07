@@ -8,8 +8,73 @@ import {uploadOnCloudinary} from "../utils/cloudinary.js"
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
+    const { page = 1, limit = 3, query, sortBy, sortType, userId } = req.query
     //TODO: get all videos based on query, sort, pagination
+
+    // query is used to search for video title and desc
+    // sortBy is used to tell on which field sorting should happen
+    // sortType is asc/desc
+    
+    const sortOrder = sortType.toLowerCase() === 'asc' ? 1 : -1
+
+    const videoAggregate = await Video.aggregate([
+        {
+            $search:{
+                index: "video_searching",
+                text: {
+                    query: query,
+                    path: ['title', 'description']
+                }
+            }
+        },
+        {
+            $match:{
+                owner: new mongoose.Types.ObjectId(userId)
+            }
+        },
+        {
+            $match:{
+                isPublished: true
+            }
+        },
+        {
+          $sort: { [sortBy]: sortOrder }
+        },
+        {
+            $lookup: {
+                from: 'users',
+                localField: 'owner',
+                foreignField: '_id',
+                as: "ownerDetails",
+                pipeline:[
+                    {
+                        $project: {
+                            username: 1, 
+                            "avatar.url": 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $unwind: "$ownerDetails"
+        }
+    ])
+
+    console.log("videos: ",videoAggregate)
+
+    const options = {
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10)
+    }
+
+    const videos = await Video.aggregatePaginate(videoAggregate, options)
+
+    console.log("videos: ",videos)
+
+    return res.status(200).json(
+        new ApiResponse(200, videos, 'Video Fetched Successfully')
+    )
     
 })
 

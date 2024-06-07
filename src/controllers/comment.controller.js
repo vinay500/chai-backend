@@ -1,17 +1,44 @@
-import mongoose, { connect } from "mongoose"
+import mongoose, { connect, isValidObjectId } from "mongoose"
 import {Comment} from "../models/comment.model.js"
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 import { Video } from "../models/video.model.js"
 import { ownerOrNot } from "../utils/checkOwnerPermission.js"
+import { registerUser } from "./user.controller.js"
 
 
 const getVideoComments = asyncHandler(async (req, res) => {
     //TODO: get all comments for a video
     const {videoId} = req.params
-    const {page = 1, limit = 10} = req.query
+    const {page = 1, limit = 3} = req.query
     
+    if(!isValidObjectId(videoId)){
+        throw new ApiError(400, "Invalid Video ID")
+    }
+    const options = {
+        page: parseInt(page),
+        limit: parseInt(limit)
+    }
+
+    const videoCommentsAggregate = await Comment.aggregate([
+        {
+            $match:{
+                owner: req.user._id,
+                video: videoId
+            }
+        }
+    ])
+
+    console.log("videoCommentsAggregate: ", videoCommentsAggregate)
+
+    const videoComments = await Comment.aggregatePaginate(videoCommentsAggregate, options)
+
+    console.log("videoComments: ", videoComments)
+
+    return res.status(200).json(
+        new ApiResponse(200, videoComments, "Video Comments Fetched")
+    )
 
 
 })

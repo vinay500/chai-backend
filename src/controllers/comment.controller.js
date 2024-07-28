@@ -1,4 +1,4 @@
-import mongoose, { connect } from "mongoose"
+import mongoose, { connect } from "mongoose";
 import {Comment} from "../models/comment.model.js"
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
@@ -13,6 +13,10 @@ const getVideoComments = asyncHandler(async (req, res) => {
     const {page = 1, limit = 10} = req.query
     
 
+    return res.status(200).json(
+        new ApiResponse(200, "", "api not finished")
+    )
+    
 
 })
 
@@ -20,6 +24,8 @@ const addComment = asyncHandler(async (req, res) => {
     // TODO: add a comment to a video
     const { content } = req.body;
     
+    console.log("in addComment")
+
     if(!content){
         throw new ApiError(400, "Content is Required");
     }
@@ -36,6 +42,8 @@ const addComment = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid Video ID");
     }
 
+    console.log("got video");
+
     const user = req?.user;
     
     if(!user){
@@ -48,6 +56,8 @@ const addComment = asyncHandler(async (req, res) => {
         video,
         owner:user
     })
+
+    console.log("comment created");
 
     return res.status(200).json(
         new ApiResponse(200, comment, "Comment created Successfully")
@@ -62,13 +72,13 @@ const updateComment = asyncHandler(async (req, res) => {
 
     const comment = await Comment.findById(commentId);
 
-    const checkOwner = ownerOrNot(comment,req);
+    // const checkOwner = ownerOrNot(comment,req);
 
-    console.log("checkOwner:",checkOwner);
+    // console.log("checkOwner:",checkOwner);
 
-    if(!checkOwner || checkOwner == "Error Occured"){
-        throw new ApiError(400,"You can't Update the Tweet as you are not the Owner");
-    }
+    // if(!checkOwner || checkOwner == "Error Occured"){
+    //     throw new ApiError(400,"You can't Update the Tweet as you are not the Owner");
+    // }
 
     const { content } = req.body;
 
@@ -102,15 +112,14 @@ const deleteComment = asyncHandler(async (req, res) => {
 
     console.log("comment: ",comment);
 
-    const checkOwner = ownerOrNot(comment, req);
+    // const checkOwner = ownerOrNot(comment, req);
 
-    console.log("checkOwner:",checkOwner);
+    // console.log("checkOwner:",checkOwner);
 
-    if(!checkOwner || checkOwner == "Error Occured"){
-        throw new ApiError(400,"You can't Update the Tweet as you are not the Owner");
-    }
+    // if(!checkOwner || checkOwner == "Error Occured"){
+    //     throw new ApiError(400,"You can't Update the Tweet as you are not the Owner");
+    // }
 
-    const { content } = req.body;
 
     const deletedComment = await Comment.findByIdAndDelete(commentId)
 

@@ -10,10 +10,13 @@ import { Tweet } from "../models/tweet.model.js"
 
 
 const toggleVideoLike = asyncHandler(async (req, res) => {
+    console.log("in liking the video");
     const {videoId} = req.params
     //TODO: toggle like on video
     // if the video is already liked then remove the like obj 
     // if not liked then add the like obj 
+
+    console.log("liking the video");
 
     if(!isValidObjectId(videoId)){
         throw new ApiError(400, "Invalid VideoId")
@@ -28,7 +31,7 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
         const deleteLike = await Like.findByIdAndDelete(alreadyLiked?._id)
         
         return res.status(200).json(
-            new ApiResponse(200, "Video Unlicked Succesfully")
+            new ApiResponse(200, {}, "Video Unlicked Successfully")
         )
     }
 
@@ -38,7 +41,7 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
     })
 
     return res.status(200).json(
-        new ApiResponse(200, likeVideo, "Video Licked Succesfully")
+        new ApiResponse(200, likeVideo, "Video Licked Successfully")
     )
 
 

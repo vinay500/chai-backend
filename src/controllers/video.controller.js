@@ -10,7 +10,8 @@ import {uploadOnCloudinary} from "../utils/cloudinary.js"
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
     //TODO: get all videos based on query, sort, pagination
-    
+    console.log("get all videos api is not done")
+      
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
@@ -58,10 +59,12 @@ const getVideoById = asyncHandler(async (req, res) => {
     // TODO:
     // 1.get video likes, comments, owner details, 
     // 2. if getVideoById is done becoz user is viewing the video then update views
-    
+    console.log("video: ",video);
     if(!video){
+        console.log("!video")
         throw new ApiError("Video fetched failed");
     }else{
+        console.log("Video fetched Successfully")
         await Video.findByIdAndUpdate(videoId,
             {
                 $inc: {

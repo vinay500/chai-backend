@@ -11,7 +11,7 @@ import { registerUser } from "./user.controller.js"
 const getVideoComments = asyncHandler(async (req, res) => {
     //TODO: get all comments for a video
     const {videoId} = req.params
-    const {page = 1, limit = 3} = req.query
+    const {page = 1, limit = 5} = req.query
     
     if(!isValidObjectId(videoId)){
         throw new ApiError(400, "Invalid Video ID")
@@ -21,16 +21,18 @@ const getVideoComments = asyncHandler(async (req, res) => {
         limit: parseInt(limit)
     }
 
+    // dont use await
     const videoCommentsAggregate = await Comment.aggregate([
+    // const videoCommentsAggregate =  Comment.aggregate([
         {
             $match:{
-                owner: req.user._id,
+                owner: new mongoose.Types.ObjectId(req.user._id),
                 video: videoId
             }
         }
     ])
 
-    console.log("videoCommentsAggregate: ", videoCommentsAggregate)
+    // console.log("videoCommentsAggregate: ", videoCommentsAggregate)
 
     const videoComments = await Comment.aggregatePaginate(videoCommentsAggregate, options)
 
@@ -38,12 +40,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
 
     return res.status(200).json(
         new ApiResponse(200, videoComments, "Video Comments Fetched")
-    )
-
-    return res.status(200).json(
-        new ApiResponse(200, "", "api not finished")
-    )
-    
+    )    
 
 })
 
@@ -62,7 +59,7 @@ const addComment = asyncHandler(async (req, res) => {
     if(!videoId){
         throw new ApiError(400, "Video ID is Required");
     }
-
+    console.log("video id: ",videoId);
     const video = await Video.findById(videoId);
 
     if(!video){

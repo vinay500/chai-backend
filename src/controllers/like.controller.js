@@ -47,8 +47,53 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
 
 })
 
+
+const disLikeVideo = asyncHandler(async (req, res) => {
+
+    console.log("disliking the video")
+    const { videoId } = req.params
+    console.log("videoId: ",videoId)
+
+    if (!isValidObjectId(videoId)){
+        throw new ApiError(400, "Invalid Video ID")
+    }
+
+    const aleadyLikedVideoOrNot = await Like.findOne({
+        video:videoId,
+        likedBy:req.user._id
+    })
+
+    if(!aleadyLikedVideoOrNot){
+        console.log("not liked video before")
+        return res.status(200).json(
+            new ApiResponse(200, "", "Video Disliked Successfully")
+        )
+    }
+
+    const likeId = await Like.findOne({
+        video: videoId,
+        likedBy: req.user._id
+    })
+    console.log("found existing video like:",likeId)
+
+    const removeLike = await Like.findByIdAndDelete(likeId)
+
+    if (!removeLike){
+        console.log("video dislinking failed")
+        return new ApiError(400,"Video Disliked Failed")
+    }
+
+    console.log("video disliked successfully")
+
+    return res.status(200).json(
+        new ApiResponse(200, removeLike, "Video Disliked Successfully")
+    )
+
+})
+
 const toggleCommentLike = asyncHandler(async (req, res) => {
     const {commentId} = req.params
+    console.log("commentid: ",commentId)
     //TODO: toggle like on comment
 
     if(!isValidObjectId(commentId)){
@@ -64,7 +109,7 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
         const deleteLike = await Like.findByIdAndDelete(alreadyLiked?._id)
         
         return res.status(200).json(
-            new ApiResponse(200, "Comment Unlicked Succesfully")
+            new ApiResponse(200, deleteLike,"Comment Unlicked Succesfully")
         )
     }
 
@@ -72,12 +117,16 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
         comment: await Comment.findById(commentId),
         likedBy: req.user
     })
+    // if(likeComment){
+    //     console.log("comment liked successfully")
+    // }
 
     return res.status(200).json(
         new ApiResponse(200, likeComment, "Comment Licked Succesfully")
     )
 
 })
+
 
 const toggleTweetLike = asyncHandler(async (req, res) => {
     const {tweetId} = req.params
@@ -154,5 +203,6 @@ export {
     toggleCommentLike,
     toggleTweetLike,
     toggleVideoLike,
+    disLikeVideo,
     getLikedVideos
 }

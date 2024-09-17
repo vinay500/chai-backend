@@ -5,13 +5,14 @@ import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
+import {Subscription} from "../models/subscription.model.js"
+import { updateWatchHistory } from "./user.controller.js"
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 3, query, sortBy, sortType, userId } = req.query
-    //TODO: get all videos based on query, sort, pagination
+    // console.log("req.query: ",req.query)
 
-    console.log("get all videos api is not done")
+    const { page = 1, limit = 10, query, sortBy, sortType, userId, onlySubscribed } = req.query;
 
     // query is used to search for video title and desc
     // sortBy is used to tell on which field sorting should happen
@@ -19,21 +20,40 @@ const getAllVideos = asyncHandler(async (req, res) => {
     
     const sortOrder = sortType.toLowerCase() === 'asc' ? 1 : -1
 
-    const videoAggregate = await Video.aggregate([
-        {
-            $search:{
-                index: "video_searching",
-                text: {
-                    query: query,
-                    path: ['title', 'description']
+    const pipeline = []
+
+    if (query) {
+        console.log("query: ",query)
+        // Search case: Full-text search for the provided query
+        pipeline = [
+            {
+                $search: {
+                    index: "video_searching",
+                    text: {
+                        query: query,
+                        path: ['title', 'description']
+                    }
                 }
             }
-        },
-        {
-            $match:{
-                owner: new mongoose.Types.ObjectId(userId)
+        ];
+    }
+
+    if(onlySubscribed){
+        pipeline = [
+            {
+                
             }
-        },
+        ]
+    }
+
+    const videoAggregate = Video.aggregate([
+        ...pipeline,
+        // getAllVideos api will return all the published videos rather than only user published videos  
+        // {
+        //     $match:{
+        //         owner: new mongoose.Types.ObjectId(userId)
+        //     }
+        // },
         {
             $match:{
                 isPublished: true
@@ -51,33 +71,258 @@ const getAllVideos = asyncHandler(async (req, res) => {
                 pipeline:[
                     {
                         $project: {
-                            username: 1, 
-                            "avatar.url": 1
+                            "_id": 0,
+                            "username": 1, 
+                            "avatar": 1
                         }
                     }
                 ]
             }
         },
+        // without unwind the owner details will be an array of an object, 
+        // but with unwind it is an object
         {
             $unwind: "$ownerDetails"
+        },
+        {
+            $project: {
+                "owner": 0
+            }
         }
     ])
 
-    console.log("videos: ",videoAggregate)
+    // console.log("videos: ",videoAggregate)
 
     const options = {
         page: parseInt(page, 10),
-        limit: parseInt(limit, 10)
+        limit: parseInt(limit, 2)
     }
 
     const videos = await Video.aggregatePaginate(videoAggregate, options)
 
-    console.log("videos: ",videos)
+    console.log("videos in getAllVideos: ",videos)
 
     return res.status(200).json(
         new ApiResponse(200, videos, 'Video Fetched Successfully')
     )
 })
+
+
+const getSubscribedChannelVideos = asyncHandler( async (req, res) => {
+    console.log("in getSubscribedChannelVideos()");
+    console.log("req.query: ",req.query)
+    const { page = 1, limit = 10, query, sortBy, sortType, userId, onlySubscribed } = req.query
+    console.log("page = 1, limit = 3, sortBy, sortType, userId: ", page, limit, query, sortBy, sortType, userId)
+
+    // this aggregation is working for getting videos of subscribed channels 
+    // along with avatar, username of video owner details
+    // [
+    //     {
+    //               $match:{
+    //                   subscriber: { "$oid": "6629e4e9344538a98c6406e0" }
+    //               }
+          
+    //           },
+    //   {
+    //                 $lookup:{
+    //                   from: "videos",
+    //                   localField: "channel",
+    //                   foreignField: "owner",
+    //                   as: "subscribedVideos",
+                      
+    //                   }
+    //               },
+    //     {
+    //       $unwind: "$subscribedVideos"
+    //     },
+    //     {
+    //       $lookup: {
+    //         from: "users",
+    //         localField: "subscribedVideos.owner",
+    //         foreignField: "_id",
+    //         as: "ownerdetails",
+    //         pipeline:[
+    //           {
+    //             "$project":{
+    //               "username":1,
+    //               "avatar":1
+    //             }
+    //           }
+    //         ]
+    //       }
+    //     }
+              
+    //   ]
+
+    
+
+    const req_userId =  req.user._id;
+    console.log("req_userId: ",req_userId)
+
+    const subscribedChannelVideosAggregate = Subscription.aggregate([
+        {
+            $match:{
+                subscriber: new mongoose.Types.ObjectId(req_userId)
+            }
+        },
+        {
+            $lookup:{
+                from: "videos",
+                localField: "channel",
+                foreignField: "owner",
+                as: "subscribedVideos",
+            }
+        },
+        {
+            $unwind: "$subscribedVideos"
+        },
+        {
+            $lookup:{
+                from: "users",
+                localField:"channel",
+                foreignField:"_id",
+                as:"ownerdetails",
+                pipeline:[
+                    {
+                        $project:{
+                            "_id": 0,
+                            "avatar": 1,
+                            "username": 1
+                        }
+                    }
+                ]
+            }
+        },
+        // {
+        //     $project: {
+        //       subscriber: 1,
+        //       subscribedVideos: {
+        //         video: 1,
+        //         ownerDetails: {
+        //           avatar: 1,
+        //           username: 1
+        //         }
+        //       }
+        //     }
+        // }
+    ])
+
+    const options = {
+        page: 1,
+        limit: 10
+    }
+
+    const subscribedChannelVideos = await Subscription.aggregatePaginate(subscribedChannelVideosAggregate, options)
+
+    console.log("subscribedChannelVideos: ",subscribedChannelVideos);
+
+    return res.status(200).json( 
+        new ApiResponse(200, subscribedChannelVideos, "Subscribed Channel Videos Fetched Successfully")
+    )
+
+
+
+
+    // const aggregationPipeline = [
+    //     {
+    //         $lookup: {
+    //             from: "subscriptions",
+    //             localField: "_id",
+    //             foreignField: "channel",
+    //             as: "subscriptions"
+    //         }
+    //     },
+    //     {
+    //         $unwind: "$subscriptions"
+    //     },
+    //     {
+    //         $match: {
+    //             "subscriptions.subscriber": new mongoose.Types.ObjectId(req.user._id)
+    //         }
+    //     },
+    //     {
+    //         $lookup: {
+    //             from: "videos",
+    //             localField: "owner",
+    //             foreignField: "owner",
+    //             as: "videos"
+    //         }
+    //     },
+    //     {
+    //         $unwind: "$videos"
+    //     },
+    //     {
+    //         $sort: {
+    //             "videos.createdAt": -1 // Sort by video creation date in descending order
+    //         }
+    //     },
+    //     {
+    //         $project: {
+    //             // Include relevant fields from the video and subscription documents
+    //             _id: 1,
+    //             title: "$videos.title",
+    //             description: "$videos.description",
+    //             thumbnail: "$videos.thumbnail",
+    //             duration: "$videos.duration",
+    //             views: "$videos.views",
+    //             isPublished: "$videos.isPublished",
+    //             owner: "$videos.owner",
+    //             createdAt: "$videos.createdAt",
+    //             subscription: {
+    //                 subscriber: "$subscriptions.subscriber",
+    //                 channel: "$subscriptions.channel"
+    //             }
+    //         }
+    //     },
+    //     {
+    //         $group: {
+    //             _id: "$videos.owner", // Group by channel owner
+    //             videos: {
+    //                 $push: {
+    //                     _id: "$videos._id",
+    //                     title: "$videos.title",
+    //                     description: "$videos.description",
+    //                     thumbnail: "$videos.thumbnail",
+    //                     duration: "$videos.duration",
+    //                     views: "$videos.views",
+    //                     isPublished: "$videos.isPublished",
+    //                     createdAt: "$videos.createdAt"
+    //                 }
+    //             }
+    //         }
+    //     },
+    //     {
+    //         $project: {
+    //             _id: 0,
+    //             videos: 1
+    //         }
+    //     }
+    // ];
+
+
+    // Video.aggregate(aggregationPipeline)
+    // .then(results => {
+    //     console.log(results); // The results will contain an array of objects, each representing a channel and its videos
+    // })
+    // .catch(error => {
+    //     console.error(error);
+    // });
+
+    // const options = {
+    //     page: 1,
+    //     limit: 10
+    // }
+
+    // const videos = Video.aggregatePaginate(aggregationPipeline, options)
+
+    // console.log("videos: ",videos)
+
+    // return res.status(200).json( 
+    //         new ApiResponse(200, videos, "Subscribed Channel Videos Fetched Successfully")
+    //     )
+    
+})
+
 
 const publishAVideo = asyncHandler(async (req, res) => {
     console.log("in publishAVideo")
@@ -119,17 +364,118 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    //TODO: get video by id
-    const video = await Video.findById(videoId)
+    console.log("videoId: ",videoId)
+
+    // const videoDetails = await Video.findById(videoId)
     // TODO:
-    // 1.get video likes, comments, owner details, 
-    // 2. if getVideoById is done becoz user is viewing the video then update views
-    console.log("video: ",video);
-    if(!video){
+    // 1.get video no. of likes and dislikes, 
+    //      channel name, avatar, no.of subs, sub or not 
+    
+    const videoDetails = await Video.aggregate([
+        {
+            $match:{
+                _id: new mongoose.Types.ObjectId(videoId)
+            }
+        },
+        {
+            $lookup:{
+                from: "users",
+                localField:"owner",
+                foreignField:"_id",
+                as:"ownerDetails",
+                pipeline:[
+                    {
+                        $project:{
+                            "_id": 0,
+                            "username": 1,
+                            "avatar": 1
+                        }
+                    }
+                ]
+            },
+        },
+        {
+            $lookup:{
+                from: "likes",
+                localField: "_id",
+                foreignField: "video",
+                as: "videoLikes"
+            },
+        },
+        {
+            $lookup:{
+                from: "dislikes",
+                localField: "_id",
+                foreignField: "video",
+                as: "videoDislikes"
+            }
+        },
+        {
+            $lookup:{
+                from: "subscriptions",
+                localField:"owner",
+                foreignField: "channel",
+                as: "subscribers"
+            }
+        },
+        {
+            $addFields:{
+                likesCount:{
+                    $size: "$videoLikes"
+                },
+                dislikeCount:{
+                    $size: "$videoDislikes"
+                },
+                subscribersCount:{
+                    $size: "$subscribers"
+                }
+            }
+        },
+        {
+            $project:{
+                "_id": 0,
+                "videoFile": 1,
+                "thumbnail": 1,
+                "title": 1,
+                "description": 1,
+                "duration": 1,
+                "views": 1,
+                "isPublished": 1,
+                // "owner": "66a28d484ac26491e3533d2a",
+                "createdAt": 1,
+                // "updatedAt": "2024-09-11T16:44:45.056Z",
+                // "__v": 0,
+                // "ownerDetails": [
+                //     {
+                //         "username": "user6",
+                //         "avatar": "http://res.cloudinary.com/ddenr3vgm/image/upload/v1721929030/yiwh1f2tjutaz9uoggze.jpg"
+                //     }
+                // ],
+                ownerDetails: 1,
+                // "videoLikes": [],
+                // "videoDislikes": [],
+                "likesCount": 1,
+                "dislikeCount": 1,
+                "subscribersCount": 1
+            }
+        }
+    ])
+
+    console.log("video: ",videoDetails);
+    if(!videoDetails){
         console.log("!video")
-        throw new ApiError("Video fetched failed");
+        throw new ApiError(401, "Video fetched failed");
     }else{
         console.log("Video fetched Successfully")
+
+        // const addVideoToWatchHistory =  updateWatchHistory(req,res)
+        // console.log("addVideoToWatchHistory: ",addVideoToWatchHistory)
+        // console.log("!addVideoToWatchHistory: ",!addVideoToWatchHistory)
+        // if(!addVideoToWatchHistory){
+        //     console.log("!addVideoToWatchHistory")
+        //     throw new ApiError("Video fetched failed");
+        // }
+
         await Video.findByIdAndUpdate(videoId,
             {
                 $inc: {
@@ -137,9 +483,17 @@ const getVideoById = asyncHandler(async (req, res) => {
                 }
             }
         )
+
+        await User.findByIdAndUpdate(req?.user._id,
+            {
+                $push:{
+                    watchHistory: await Video.findById(videoId)
+                }
+            }
+        )
     }   
     return res.status(200).json(
-        new ApiResponse(200, video, "Video fetched Successfully")
+        new ApiResponse(200, videoDetails, "Video fetched Successfully")
     )
 })
 
@@ -151,7 +505,6 @@ const updateVideo = asyncHandler(async (req, res) => {
         throw new ApiError(401, "videoId is Required")   
     }
 
-    
 
     const { title, description } = req.body;
 
@@ -302,5 +655,6 @@ export {
     getVideoById,
     updateVideo,
     deleteVideo,
-    togglePublishStatus
+    togglePublishStatus,
+    getSubscribedChannelVideos
 }

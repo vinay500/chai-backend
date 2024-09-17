@@ -132,10 +132,10 @@ const loginUser = asyncHandler( async (req, res) => {
     // reason why we are getting the user again from db is because when we got the user before from db then 
     // user doesn't have a refresh token so we are again getting the user or we can even update the existing user if we feel like making a DB call is expensive
     const loggedInUser =   await User.findById(user._id).select("-password -refreshToken")
+    console.log("loggedInUser.username: ",loggedInUser.username)
 
     const options = { 
         "httponly":true,
-
     }
 
     return res
@@ -145,7 +145,7 @@ const loginUser = asyncHandler( async (req, res) => {
     .json(
         new ApiResponse(
             200,{
-                user: loggedInUser, accessToken, refreshToken
+                user: loggedInUser.username, accessToken, refreshToken
             },
             "User loggedIn Succesfully"
         )
@@ -420,6 +420,7 @@ const getWatchHistory = asyncHandler( async(req, res) => {
         },
         {
             $lookup:{
+                // check whether it is "Video" or "videos"
                 from: "Video",
                 localField: "watchHistory",
                 foreignField: "_id",
@@ -442,7 +443,9 @@ const getWatchHistory = asyncHandler( async(req, res) => {
                             ]
                         }
                     },
-                    // this pipeline is added for sake of frontend dev, because by using aggregate we will send the array to the frontend then it will not become easy so we will give the owner field as an object so it becomes easy for the frontend dev
+                    // this pipeline is added for sake of frontend dev, because by using aggregate we will send the array to the frontend 
+                    // then it will not become easy so we will give the owner field as an object so it becomes easy 
+                    // for the frontend dev
                     {
                         $addFields:{
                             owner:{
@@ -461,5 +464,39 @@ const getWatchHistory = asyncHandler( async(req, res) => {
 })
 
 
+const updateWatchHistory = asyncHandler( async(req, res)=>{
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken, changePassword, getCurrentUser, updateUserAvatar, updateUserCoverImage, getUserChannelProfile, getWatchHistory, updateAccountDetails }
+    console.log("in updateWatchHistory()")
+    
+    const { videoId } = req.params;
+    console.log("in updateWatchHistory() videoId: ",videoId)
+    const videoAddedToWatchHistory = await User.findByIdAndUpdate(
+        req?.user._id,
+        {
+            $push: { watchHistory: videoId}
+        },
+        { new: true}
+    )
+
+
+    if(!videoAddedToWatchHistory){
+        return ApiError(400, "Video Adding to Watch History Failed")
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, "", "Video Adding to Watch History Successfully")
+    )
+
+    // we are not returning 200 status code because we are not sending any response to the frontend
+    // but watch history is being updated in the backend ie., by getVideoById()
+
+    // if(!videoAddedToWatchHistory){
+    //     return false
+    // }
+    // console.log("videoAddedToWatchHistory Successfully")
+    // return true
+})
+
+
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken, changePassword, getCurrentUser, updateUserAvatar, updateUserCoverImage, getUserChannelProfile, getWatchHistory, updateAccountDetails, updateWatchHistory }
